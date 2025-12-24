@@ -44,7 +44,7 @@ public class Gomoku extends Contract {
     private static final String FUNC_SURRENDER = "surrender";
     private static final String FUNC_GETGAMEINFO = "getGameInfo";
     private static final String FUNC_GETPIECE = "getPiece";
-    private static final String FUNC_GAMECOUNTER = "gameCounter";  // ← 添加這個
+    private static final String FUNC_GAMECOUNTER = "gameCounter";
 
     // Events
     public static final Event GAMECREATED_EVENT = new Event("GameCreated",

@@ -1,18 +1,18 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>區塊鏈五子棋 | Blockchain Gomoku</title>
+    <title>Blockchain Gomoku | Blockchain Gomoku</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <!-- Header -->
         <header>
-            <h1>🎮 區塊鏈五子棋</h1>
+            <h1>🎮 Blockchain Gomoku</h1>
             <div class="connection-status">
-                <span id="connectionStatus" class="status-disconnected">未連接</span>
+                <span id="connectionStatus" class="status-disconnected">Disconnected</span>
                 <span id="accountAddress"></span>
             </div>
         </header>
@@ -22,71 +22,71 @@
             <!-- Left Panel: Game Controls -->
             <div class="left-panel">
                 <section class="card">
-                    <h2>🎯 遊戲控制</h2>
+                    <h2>🎯 Game Controls</h2>
                     
                     <!-- Account Selection -->
                     <div class="control-group">
-                        <label>選擇帳號:</label>
+                        <label>Select Account:</label>
                         <select id="accountSelect">
-                            <option value="">請選擇...</option>
+                            <option value="">Please select...</option>
                         </select>
                     </div>
 
                     <!-- Game ID Input -->
                     <div class="control-group">
-                        <label>遊戲 ID:</label>
-                        <input type="number" id="gameIdInput" placeholder="輸入遊戲 ID" min="0">
-                        <button onclick="loadGame()" class="btn btn-primary">載入遊戲</button>
+                        <label>Game ID:</label>
+                        <input type="number" id="gameIdInput" placeholder="Enter Game ID" min="0">
+                        <button onclick="loadGame()" class="btn btn-primary">Load Game</button>
                     </div>
 
                     <!-- Create Game -->
                     <div class="control-group">
-                        <label>創建新遊戲:</label>
-                        <input type="number" id="betAmount" placeholder="賭注 (wei)" value="0">
-                        <button onclick="createGame()" class="btn btn-success">創建遊戲</button>
+                        <label>Create New Game:</label>
+                        <input type="number" id="betAmount" placeholder="Bet (wei)" value="0">
+                        <button onclick="createGame()" class="btn btn-success">Create Game</button>
                     </div>
 
                     <!-- Join Game -->
                     <div class="control-group">
-                        <button onclick="joinGame()" class="btn btn-success">加入遊戲</button>
+                        <button onclick="joinGame()" class="btn btn-success">Join Game</button>
                     </div>
 
                     <!-- Surrender -->
                     <div class="control-group">
-                        <button onclick="surrender()" class="btn btn-danger">認輸</button>
+                        <button onclick="surrender()" class="btn btn-danger">Surrender</button>
                     </div>
                 </section>
 
                 <!-- Game Info -->
                 <section class="card">
-                    <h2>📊 遊戲資訊</h2>
+                    <h2>📊 Game Info</h2>
                     <div class="game-info">
                         <div class="info-row">
-                            <span class="info-label">總遊戲數:</span>
+                            <span class="info-label">Total Games:</span>
                             <span id="totalGames" class="info-value">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">遊戲狀態:</span>
+                            <span class="info-label">Game State:</span>
                             <span id="gameState" class="info-value">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">當前回合:</span>
+                            <span class="info-label">Current Turn:</span>
                             <span id="currentTurn" class="info-value">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">黑方 (先手):</span>
+                            <span class="info-label">Black Player (First):</span>
                             <span id="blackPlayer" class="info-value address">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">白方 (後手):</span>
+                            <span class="info-label">White Player (Second):</span>
                             <span id="whitePlayer" class="info-value address">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">賭注:</span>
+                            <span class="info-label">Bet:</span>
                             <span id="betAmountDisplay" class="info-value">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">移動次數:</span>
+                            <span class="info-label">Move Count:</span>
                             <span id="moveCount" class="info-value">-</span>
                         </div>
                     </div>
@@ -94,11 +94,11 @@
 
                 <!-- Mining Helper -->
                 <section class="card">
-                    <h2>⛏️ 挖礦提醒</h2>
+                    <h2>⛏️ Mining Reminder</h2>
                     <div class="mining-reminder">
-                        <p>交易發送後，請在 Geth Console 執行:</p>
+                        <p>After sending transaction, please run in Geth Console:</p>
                         <code>miner.start(1); admin.sleep(3); miner.stop()</code>
-                        <button onclick="copyMiningCommand()" class="btn btn-secondary">複製命令</button>
+                        <button onclick="copyMiningCommand()" class="btn btn-secondary">Copy Command</button>
                     </div>
                 </section>
             </div>
@@ -106,18 +106,18 @@
             <!-- Center Panel: Game Board -->
             <div class="center-panel">
                 <section class="card board-container">
-                    <h2>🎲 棋盤 (15x15)</h2>
+                    <h2>🎲 Board (15x15)</h2>
                     <div id="boardWrapper">
                         <canvas id="gameBoard" width="600" height="600"></canvas>
                     </div>
                     <div class="board-legend">
                         <div class="legend-item">
                             <span class="piece black-piece-small"></span>
-                            <span>黑棋 (你)</span>
+                            <span>Black (You)</span>
                         </div>
                         <div class="legend-item">
                             <span class="piece white-piece-small"></span>
-                            <span>白棋 (對手)</span>
+                            <span>White (Opponent)</span>
                         </div>
                     </div>
                 </section>
@@ -126,18 +126,18 @@
             <!-- Right Panel: Chat -->
             <div class="right-panel">
                 <section class="card chat-container">
-                    <h2>💬 聊天室</h2>
+                    <h2>💬 Chat Room</h2>
                     <div id="chatMessages" class="chat-messages"></div>
                     <div class="chat-input-container">
-                        <input type="text" id="chatInput" placeholder="輸入訊息..." 
+                        <input type="text" id="chatInput" placeholder="Enter message..." 
                                onkeypress="if(event.key==='Enter') sendChat()">
-                        <button onclick="sendChat()" class="btn btn-primary">發送</button>
+                        <button onclick="sendChat()" class="btn btn-primary">Send</button>
                     </div>
                 </section>
 
                 <!-- Event Log -->
                 <section class="card">
-                    <h2>📜 事件記錄</h2>
+                    <h2>📜 Event Log</h2>
                     <div id="eventLog" class="event-log"></div>
                 </section>
             </div>

@@ -1,78 +1,78 @@
-# 區塊鏈五子棋 Web 介面
+# Blockchain Gomoku Web Interface
 
-這是一個基於區塊鏈的五子棋遊戲 Web 介面，可以視覺化顯示棋盤、即時聊天，並與智能合約互動。
+This is a blockchain-based Gomoku game web interface that visualizes the board, provides real-time chat, and interacts with smart contracts.
 
-## 功能特色
+## Features
 
-✨ **完整的遊戲介面**
-- 15x15 可視化棋盤，支援鼠標點擊下棋
-- 棋子放置預覽效果
-- 即時更新遊戲狀態
+✨ **Complete Game Interface**
+- 15x15 visual board with mouse click support for placing pieces
+- Piece placement preview effect
+- Real-time game state updates
 
-💬 **聊天室功能**
-- 鏈上聊天訊息
-- 即時接收新訊息
-- 顯示歷史聊天記錄
+💬 **Chat Room Functionality**
+- On-chain chat messages
+- Real-time message reception
+- Display chat history
 
-📊 **遊戲資訊顯示**
-- 當前遊戲狀態
-- 玩家資訊
-- 移動次數統計
+📊 **Game Information Display**
+- Current game state
+- Player information
+- Move count statistics
 
-📜 **事件監聽**
-- 自動監聽區塊鏈事件
-- 即時更新遊戲狀態
-- 詳細的事件記錄
+📜 **Event Listening**
+- Automatically listens to blockchain events
+- Real-time game state updates
+- Detailed event logs
 
-## 檔案結構
+## File Structure
 
 ```
 web-ui/
-├── index.html      # 主頁面
-├── style.css       # 樣式表
-├── config.js       # 合約配置和 ABI
-├── app.js          # 主應用邏輯
-├── board.js        # 棋盤繪製
-├── chat.js         # 聊天室功能
-└── README.md       # 說明文件
+├── index.html      # Main page
+├── style.css       # Stylesheet
+├── config.js       # Contract configuration and ABI
+├── app.js          # Main application logic
+├── board.js        # Board rendering
+├── chat.js         # Chat room functionality
+└── README.md       # Documentation
 ```
 
-## 使用步驟
+## Usage Instructions
 
-### 1. 確保 Geth 節點運行
+### 1. Ensure Geth Node is Running
 
 ```bash
-# 啟動 Docker 容器
+# Start Docker container
 docker start <container_id>
 
-# 進入容器
+# Enter container
 docker exec -it <container_id> /bin/sh
 
-# 啟動 Geth
+# Start Geth
 geth --datadir ./ --networkid 11330023 --http --http.addr 0.0.0.0 --http.port 8545 --http.api eth,web3,net,personal --http.corsdomain "*" --http.vhosts "*" --allow-insecure-unlock console
 ```
 
-### 2. 解鎖帳號
+### 2. Unlock Accounts
 
-在 Geth console 中：
+In Geth console:
 
 ```javascript
 personal.unlockAccount(eth.accounts[0], "nycu", 0)
 personal.unlockAccount(eth.accounts[1], "nycu2", 0)
 ```
 
-### 3. 啟動 Web 介面
+### 3. Start Web Interface
 
-#### 方式 A: 使用 Python 簡易伺服器
+#### Method A: Using Python Simple Server
 
 ```bash
 cd web-ui
 python3 -m http.server 8000
 ```
 
-然後在瀏覽器打開: `http://localhost:8000`
+Then open in browser: `http://localhost:8000`
 
-#### 方式 B: 使用 Node.js http-server
+#### Method B: Using Node.js http-server
 
 ```bash
 npm install -g http-server
@@ -80,156 +80,156 @@ cd web-ui
 http-server -p 8000 --cors
 ```
 
-#### 方式 C: 直接用瀏覽器打開
+#### Method C: Open Directly in Browser
 
 ```bash
 open index.html
 ```
 
-**注意**: 直接打開可能會遇到 CORS 問題，建議使用 HTTP 伺服器。
+**Note**: Opening directly may encounter CORS issues, it's recommended to use an HTTP server.
 
-### 4. 使用介面
+### 4. Using the Interface
 
-1. **選擇帳號**: 從下拉選單選擇玩家帳號
-2. **創建遊戲**: 輸入賭注金額（可以是 0），點擊「創建遊戲」
-3. **執行挖礦**: 在 Geth console 執行挖礦命令確認交易
+1. **Select Account**: Choose player account from dropdown menu
+2. **Create Game**: Enter bet amount (can be 0), click "Create Game"
+3. **Run Mining**: Execute mining command in Geth console to confirm transaction
    ```javascript
    miner.start(1); admin.sleep(3); miner.stop()
    ```
-4. **加入遊戲**: 另一個玩家輸入遊戲 ID，點擊「加入遊戲」
-5. **開始下棋**: 點擊棋盤上的交叉點下棋
-6. **聊天互動**: 在聊天室輸入訊息與對手交流
+4. **Join Game**: Another player enters game ID, clicks "Join Game"
+5. **Start Playing**: Click on board intersections to place pieces
+6. **Chat Interaction**: Enter messages in chat room to communicate with opponent
 
-## 挖礦命令快速參考
+## Mining Command Quick Reference
 
-每次發送交易後，都需要在 Geth console 執行：
+After sending each transaction, execute in Geth console:
 
 ```javascript
 miner.start(1); admin.sleep(3); miner.stop()
 ```
 
-或使用介面上的「複製命令」按鈕。
+Or use the "Copy Command" button on the interface.
 
-## 常見問題
+## Common Issues
 
-### Q1: 無法連接到區塊鏈節點
+### Q1: Cannot connect to blockchain node
 
-**A**: 檢查：
-- Geth 是否正在運行
-- HTTP RPC 是否啟用（`--http` 參數）
-- CORS 設定是否正確（`--http.corsdomain "*"`）
-- 防火牆是否阻擋 8545 埠
+**A**: Check:
+- Is Geth running
+- Is HTTP RPC enabled (\`--http\` parameter)
+- Is CORS configured correctly (\`--http.corsdomain "*"\`)
+- Is firewall blocking port 8545
 
-### Q2: 交易發送後沒有反應
+### Q2: No response after sending transaction
 
-**A**: 必須執行挖礦命令來打包交易：
+**A**: Must execute mining command to package transaction:
 ```javascript
 miner.start(1); admin.sleep(3); miner.stop()
 ```
 
-### Q3: 帳號未解鎖
+### Q3: Account not unlocked
 
-**A**: 在 Geth console 解鎖帳號：
+**A**: Unlock account in Geth console:
 ```javascript
 personal.unlockAccount(eth.accounts[0], "nycu", 0)
 ```
 
-### Q4: 下棋時出現 "Not your turn" 錯誤
+### Q4: "Not your turn" error when placing piece
 
 **A**: 
-- 確認當前輪到你下棋
-- 檢查上一個交易是否已經被挖礦確認
-- 重新載入遊戲狀態
+- Confirm it's your turn
+- Check if previous transaction has been confirmed by mining
+- Reload game state
 
-### Q5: 聊天訊息沒有顯示
+### Q5: Chat messages not displaying
 
 **A**: 
-- 檢查事件監聽是否正常
-- 確認聊天交易已被挖礦
-- 嘗試重新載入遊戲
+- Check if event listening is normal
+- Confirm chat transaction has been mined
+- Try reloading the game
 
-## 技術細節
+## Technical Details
 
-### 使用的技術
+### Technologies Used
 
-- **Web3.js**: 與以太坊區塊鏈互動
-- **HTML5 Canvas**: 繪製棋盤和棋子
-- **原生 JavaScript**: 無框架依賴
-- **CSS3**: 現代化 UI 設計
+- **Web3.js**: Interact with Ethereum blockchain
+- **HTML5 Canvas**: Draw board and pieces
+- **Vanilla JavaScript**: No framework dependencies
+- **CSS3**: Modern UI design
 
-### 合約互動
+### Contract Interaction
 
-所有合約方法都通過 Web3.js 呼叫：
+All contract methods are called through Web3.js:
 
 ```javascript
-// 創建遊戲
+// Create game
 await contract.methods.createGame().send({
     from: currentAccount,
     value: betAmount,
     gas: 3000000
 });
 
-// 下棋
+// Make move
 await contract.methods.makeMove(gameId, x, y).send({
     from: currentAccount,
     gas: 3000000
 });
 
-// 發送聊天
+// Send chat
 await contract.methods.sendChat(gameId, message).send({
     from: currentAccount,
     gas: 3000000
 });
 ```
 
-### 事件監聽
+### Event Listening
 
-自動監聽以下事件：
-- `MoveMade`: 玩家下棋
-- `GameEnded`: 遊戲結束
-- `PlayerJoined`: 玩家加入
-- `ChatSent`: 聊天訊息
+Automatically listens to the following events:
+- \`MoveMade\`: Player makes move
+- \`GameEnded\`: Game ends
+- \`PlayerJoined\`: Player joins
+- \`ChatSent\`: Chat message
 
-## 自訂配置
+## Custom Configuration
 
-編輯 `config.js` 修改：
+Edit \`config.js\` to modify:
 
 ```javascript
-// RPC 節點地址
+// RPC node address
 const RPC_URL = "http://localhost:8545";
 
-// 合約地址
+// Contract address
 const CONTRACT_ADDRESS = "0xYourContractAddress";
 
-// 帳號地址
+// Account addresses
 const ACCOUNTS = {
     player1: "0xAddress1",
     player2: "0xAddress2"
 };
 ```
 
-## 開發建議
+## Development Suggestions
 
-### 調試模式
+### Debug Mode
 
-在瀏覽器 Console 中可以查看：
-- 所有交易詳情
-- 事件監聽狀態
-- 錯誤訊息
+In browser Console you can view:
+- All transaction details
+- Event listening status
+- Error messages
 
-### 擴展功能
+### Extended Features
 
-可以添加的功能：
-- 悔棋功能
-- 遊戲回放
-- 勝率統計
-- 排行榜
-- 更多聊天表情
+Features that can be added:
+- Undo functionality
+- Game replay
+- Win rate statistics
+- Leaderboard
+- More chat emojis
 
-## 授權
+## License
 
 MIT License
 
-## 聯絡資訊
+## Contact Information
 
-如有問題，請參考主專案 README 或查閱 Solidity 合約文件。
+For issues, please refer to the main project README or consult the Solidity contract documentation.

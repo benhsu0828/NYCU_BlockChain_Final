@@ -1,14 +1,14 @@
-// 合約配置
+// contract address
 const CONTRACT_ADDRESS = "0xC1a3dCD9178952DB33934Be3143a6413FADe7200";
 const RPC_URL = "http://localhost:8545";
 
-// 帳號配置 (從您的 keystore 導入的地址)
+// accounts setup
 const ACCOUNTS = {
     player1: "0x851de6089fdbdee99562dd922a0aa74147f52b70",
     player2: "0x1b325b09c712f993f49550da3f3c9c288e4adc50"
 };
 
-// 合約 ABI (從 Solidity 編譯器生成)
+// contract ABI
 const CONTRACT_ABI = [
     {
         "inputs": [],

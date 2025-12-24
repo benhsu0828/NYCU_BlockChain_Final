@@ -1,120 +1,114 @@
-// 全局變數
+// Global variables
 let web3;
 let contract;
 let currentAccount = null;
 let currentGameId = null;
 let eventSubscriptions = [];
-let board; // 棋盤實例
+let board; // Board instance
 
-// 初始化應用
+// Initialize application
 async function init() {
     try {
-        // 初始化 Web3
+        // Initialize Web3
         web3 = new Web3(RPC_URL);
         
-        // 初始化合約實例
+        // Initialize contract instance
         contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
         
-        // 載入帳號列表
+        // Load account list
         await loadAccounts();
         
-        // 初始化棋盤
+        // Initialize game board
         board = new GomokuBoard('gameBoard');
         board.onCellClick = handleBoardClick;
         
-        // 初始化聊天室
+        // Initialize chat room
         initChat();
         
         updateConnectionStatus(true);
-        showToast("✓ 已連接到區塊鏈節點", "success");
+        showToast("✓ Connected to blockchain node", "success");
         
-        logEvent("系統", "應用程式初始化完成");
+        logEvent("System", "Application initialized");
         
-        // 🔥 更新總遊戲數
         await updateGameCounter();
-        
-        // 🔥 嘗試恢復上次的遊戲會話
         await restoreGameSession();
         
     } catch (error) {
-        console.error("初始化失敗:", error);
+        console.error("Initialization failed:", error);
         updateConnectionStatus(false);
-        showToast("✗ 連接失敗: " + error.message, "error");
+        showToast("✗ Connection failed: " + error.message, "error");
     }
 }
 
-// 載入帳號列表
+// Load account list
 async function loadAccounts() {
     try {
         const accounts = await web3.eth.getAccounts();
         const select = document.getElementById('accountSelect');
-        select.innerHTML = '<option value="">請選擇帳號...</option>';
+        select.innerHTML = '<option value="">Please select account...</option>';
         
         accounts.forEach((account, index) => {
             const option = document.createElement('option');
             option.value = account;
-            option.textContent = `帳號 ${index + 1}: ${account}`;
+            option.textContent = `Account ${index + 1}: ${account}`;
             select.appendChild(option);
         });
         
-        // 監聽帳號變更
+        // Listen for account changes
         select.addEventListener('change', async (e) => {
             currentAccount = e.target.value;
             if (currentAccount) {
                 document.getElementById('accountAddress').textContent = 
-                    `當前帳號: ${formatAddress(currentAccount)}`;
+                    `Current Account: ${formatAddress(currentAccount)}`;
                 
-                // 🔥 保存當前帳號到 localStorage
                 localStorage.setItem('currentAccount', currentAccount);
                 
-                // 解鎖帳號 (嘗試多個密碼)
+                // Unlock account (try multiple passwords)
                 try {
                     await web3.eth.personal.unlockAccount(currentAccount, "nycu", 0);
-                    showToast(`✓ 帳號已解鎖: ${formatAddress(currentAccount)}`, "success");
+                    showToast(`✓ Account unlocked: ${formatAddress(currentAccount)}`, "success");
                 } catch (error) {
                     try {
                         await web3.eth.personal.unlockAccount(currentAccount, "nycu2", 0);
-                        showToast(`✓ 帳號已解鎖: ${formatAddress(currentAccount)}`, "success");
+                        showToast(`✓ Account unlocked: ${formatAddress(currentAccount)}`, "success");
                     } catch (error2) {
-                        showToast("⚠ 帳號解鎖失敗，請在 Geth console 手動解鎖", "warning");
+                        showToast("⚠ Failed to unlock account, please unlock manually in Geth console", "warning");
                     }
                 }
                 
-                // 🔥 自動檢查並載入當前遊戲
                 await checkAndLoadCurrentGame();
             }
         });
         
     } catch (error) {
-        console.error("載入帳號失敗:", error);
-        showToast("✗ 無法載入帳號列表", "error");
+        console.error("Failed to load accounts:", error);
+        showToast("✗ Cannot load account list", "error");
     }
 }
 
-// 🔥 更新遊戲計數器顯示
 async function updateGameCounter() {
     try {
         const gameCounter = await contract.methods.gameCounter().call();
         document.getElementById('totalGames').textContent = gameCounter;
-        logEvent("系統", `當前有 ${gameCounter} 個遊戲 (ID: 0-${gameCounter - 1})`);
+        logEvent("System", `Currently have ${gameCounter} games (ID: 0-${gameCounter - 1})`);
     } catch (error) {
-        console.error("無法獲取遊戲計數:", error);
-        document.getElementById('totalGames').textContent = "錯誤";
+        console.error("Cannot get game count:", error);
+        document.getElementById('totalGames').textContent = "Error";
     }
 }
 
-// 創建遊戲
+// Create game
 async function createGame() {
     if (!currentAccount) {
-        showToast("請先選擇帳號", "warning");
+        showToast("Please select account first", "warning");
         return;
     }
     
     try {
         const betAmount = document.getElementById('betAmount').value || "0";
         
-        showToast("⏳ 正在創建遊戲...", "info");
-        logEvent("系統", `正在創建遊戲 (賭注: ${betAmount} wei)`);
+        showToast("⏳ Creating game...", "info");
+        logEvent("System", `Creating game (Bet: ${betAmount} wei)`);
         
         const receipt = await contract.methods.createGame().send({
             from: currentAccount,
@@ -122,47 +116,46 @@ async function createGame() {
             gas: 3000000
         });
         
-        // 從事件中獲取遊戲 ID
+        // Get game ID from event
         const gameId = receipt.events.GameCreated.returnValues.gameId;
         
-        showToast(`✓ 遊戲創建成功！遊戲 ID: ${gameId}`, "success");
-        logEvent("遊戲", `遊戲 ${gameId} 已創建`);
+        showToast(`✓ Game created successfully! Game ID: ${gameId}`, "success");
+        logEvent("Game", `Game ${gameId} created`);
         
-        // 🔥 更新遊戲計數器
         await updateGameCounter();
         
-        // 自動載入新遊戲
+        // Auto load new game
         document.getElementById('gameIdInput').value = gameId;
         await loadGame();
         
-        showToast("⚠ 請記得執行挖礦命令確認交易", "warning");
+        showToast("⚠ Please remember to run mining command to confirm transaction", "warning");
         
     } catch (error) {
-        console.error("創建遊戲失敗:", error);
-        showToast("✗ 創建遊戲失敗: " + error.message, "error");
-        logEvent("錯誤", "創建遊戲失敗: " + error.message);
+        console.error("Failed to create game:", error);
+        showToast("✗ Failed to create game: " + error.message, "error");
+        logEvent("Error", "Failed to create game: " + error.message);
     }
 }
 
-// 加入遊戲
+// Join game
 async function joinGame() {
     if (!currentAccount) {
-        showToast("請先選擇帳號", "warning");
+        showToast("Please select account first", "warning");
         return;
     }
     
     if (currentGameId === null) {
-        showToast("請先載入遊戲", "warning");
+        showToast("Please load game first", "warning");
         return;
     }
     
     try {
-        // 先獲取遊戲資訊以確認賭注
+        // First get game info to confirm bet amount
         const info = await contract.methods.getGameInfo(currentGameId).call();
         const betAmount = info.betAmount;
         
-        showToast(`⏳ 正在加入遊戲 ${currentGameId}...`, "info");
-        logEvent("系統", `正在加入遊戲 ${currentGameId} (賭注: ${betAmount} wei)`);
+        showToast(`⏳ Joining game ${currentGameId}...`, "info");
+        logEvent("System", `Joining game ${currentGameId} (Bet: ${betAmount} wei)`);
         
         await contract.methods.joinGame(currentGameId).send({
             from: currentAccount,
@@ -170,102 +163,97 @@ async function joinGame() {
             gas: 3000000
         });
         
-        showToast(`✓ 已成功加入遊戲 ${currentGameId}`, "success");
-        logEvent("遊戲", `已加入遊戲 ${currentGameId}`);
+        showToast(`✓ Successfully joined game ${currentGameId}`, "success");
+        logEvent("Game", `Joined game ${currentGameId}`);
         
-        // 重新載入遊戲狀態
+        // Reload game state
         await loadGame();
         
-        showToast("⚠ 請記得執行挖礦命令確認交易", "warning");
+        showToast("⚠ Please remember to run mining command to confirm transaction", "warning");
         
     } catch (error) {
-        console.error("加入遊戲失敗:", error);
-        showToast("✗ 加入遊戲失敗: " + error.message, "error");
-        logEvent("錯誤", "加入遊戲失敗: " + error.message);
+        console.error("Failed to join game:", error);
+        showToast("✗ Failed to join game: " + error.message, "error");
+        logEvent("Error", "Failed to join game: " + error.message);
     }
 }
 
-// 載入遊戲
+// Load game
 async function loadGame() {
     const gameId = document.getElementById('gameIdInput').value;
     
     if (!gameId && gameId !== "0") {
-        showToast("請輸入遊戲 ID", "warning");
+        showToast("Please enter game ID", "warning");
         return;
     }
     
     try {
         currentGameId = parseInt(gameId);
         
-        // 🔥 檢查遊戲是否存在
         const gameCounter = await contract.methods.gameCounter().call();
         if (currentGameId >= parseInt(gameCounter)) {
-            showToast(`✗ 遊戲 ${currentGameId} 不存在！目前只有 ${gameCounter} 個遊戲 (ID: 0-${gameCounter - 1})`, "error");
-            logEvent("錯誤", `遊戲 ${currentGameId} 不存在，gameCounter = ${gameCounter}`);
+            showToast(`✗ Game ${currentGameId} does not exist! Currently only have ${gameCounter} games (ID: 0-${gameCounter - 1})`, "error");
+            logEvent("Error", `Game ${currentGameId} does not exist, gameCounter = ${gameCounter}`);
             return;
         }
         
-        showToast(`⏳ 正在載入遊戲 ${currentGameId}...`, "info");
+        showToast(`⏳ Loading game ${currentGameId}...`, "info");
         
-        // 獲取遊戲資訊
+        // Get game info
         const info = await contract.methods.getGameInfo(currentGameId).call();
         
         console.log('Game info:', info);
         
-        // 更新遊戲資訊顯示
+        // Update game info display
         document.getElementById('gameState').textContent = GameState[info.state];
         document.getElementById('currentTurn').textContent = 
-            info.currentPlayer == 1 ? "黑方 (先手)" : "白方 (後手)";
+            info.currentPlayer == 1 ? "Black (First)" : "White (Second)";
         document.getElementById('blackPlayer').textContent = formatAddress(info.blackPlayer);
         document.getElementById('whitePlayer').textContent = 
             info.whitePlayer === "0x0000000000000000000000000000000000000000" 
-                ? "等待中..." 
+                ? "Waiting..." 
                 : formatAddress(info.whitePlayer);
         document.getElementById('betAmountDisplay').textContent = `${info.betAmount} wei`;
         document.getElementById('moveCount').textContent = info.moveCount;
         
-        // 🔥 使用 loadBoardState 而不是直接調用 getBoard
         await loadBoardState(currentGameId);
         
-        // 保存遊戲 ID 到 localStorage
+        // Save game ID to localStorage
         localStorage.setItem('currentGameId', currentGameId);
         
-        showToast(`✓ 遊戲 ${currentGameId} 載入成功`, "success");
-        logEvent("系統", `已載入遊戲 ${currentGameId}`);
+        showToast(`✓ Game ${currentGameId} loaded successfully`, "success");
+        logEvent("System", `Game ${currentGameId} loaded`);
         
-        // 訂閱事件
+        // Subscribe to events
         subscribeToEvents();
         
-        // 載入聊天記錄
+        // Load chat history
         loadChatHistory();
         
     } catch (error) {
-        console.error("載入遊戲失敗:", error);
-        showToast("✗ 載入遊戲失敗: " + error.message, "error");
-        logEvent("錯誤", "載入遊戲失敗: " + error.message);
+        console.error("Failed to load game:", error);
+        showToast("✗ Failed to load game: " + error.message, "error");
+        logEvent("Error", "Failed to load game: " + error.message);
     }
 }
 
-// 修正 loadBoardState 函數
 async function loadBoardState(gameId) {
     try {
         console.log('📥 Loading board state for game', gameId);
         
         board.clear();
         
-        // 🔥 合約使用 board[row][col]，但參數名是 getPiece(_gameId, _x, _y)
-        // 其中 _x 實際上是 row，_y 實際上是 col
+        // Contract uses board[row][col]; getPiece(_x, _y) means _x=row, _y=col
         for (let row = 0; row < 15; row++) {
             for (let col = 0; col < 15; col++) {
                 try {
-                    // 呼叫合約：getPiece(gameId, row, col)
+                    // Call contract: getPiece(gameId, row, col)
                     const cellValue = await contract.methods.getPiece(gameId, row, col).call();
                     const piece = parseInt(cellValue);
                     
                     if (piece !== 0) {
-                        // 🔥 合約的 [row][col] 對應 UI 的 (col, row)
-                        // 因為 UI: x=水平(col), y=垂直(row)
-                        // 合約: board[_x][_y] 其中 _x=row, _y=col
+                        // Contract [row][col] corresponds to UI (col, row)
+                        // UI uses x as column and y as row; contract uses _x=row, _y=col
                         console.log(`📍 Contract[${row}][${col}] = ${piece} -> UI(${col}, ${row})`);
                         board.placePiece(col, row, piece);
                     }
@@ -282,23 +270,22 @@ async function loadBoardState(gameId) {
     }
 }
 
-// 棋盤點擊處理
-// 棋盤點擊處理
+// Board click handler
 async function handleBoardClick(x, y) {
     console.log(`🖱️ Board clicked at: x=${x}, y=${y}`);
     await makeMove(x, y);
 }
 
-// 下棋 (從棋盤點擊觸發)
+    // Make move (triggered from board click)
 async function makeMove(x, y) {
     if (!currentAccount || currentGameId === null) {
-        showToast("請先載入遊戲", "warning");
+        showToast("Please load game first", "warning");
         return;
     }
 
     try {
-        // 🔥 詳細的事前檢查
-        showToast(`⏳ 檢查遊戲狀態...`, "info");
+        // Pre-flight checks
+        showToast(`⏳ Checking game state...`, "info");
         
         const gameInfo = await contract.methods.getGameInfo(currentGameId).call();
         
@@ -308,55 +295,54 @@ async function makeMove(x, y) {
         const gameState = parseInt(gameInfo.state);
         const myAccount = currentAccount.toLowerCase();
         
-        // 檢查遊戲狀態
-        const stateNames = ["等待中", "進行中", "黑方勝", "白方勝", "平局"];
+        // Check game state
+        const stateNames = ["Waiting", "Playing", "Black Won", "White Won", "Draw"];
         if (gameState !== 1) {
-            showToast(`✗ 遊戲不在進行中！狀態: ${stateNames[gameState]}`, "error");
+            showToast(`✗ Game is not in playing state! State: ${stateNames[gameState]}`, "error");
             return;
         }
         
-        // 判斷我是哪個玩家
+        // Determine which player I am
         let myColor;
         let myColorName;
         if (myAccount === blackPlayer) {
             myColor = 1;
-            myColorName = "黑方";
+            myColorName = "Black";
         } else if (myAccount === whitePlayer) {
             myColor = 2;
-            myColorName = "白方";
+            myColorName = "White";
         } else {
-            showToast(`✗ 您不是這場遊戲的玩家！`, "error");
-            logEvent("錯誤", `您的帳號: ${myAccount}`);
-            logEvent("錯誤", `黑方: ${blackPlayer}`);
-            logEvent("錯誤", `白方: ${whitePlayer}`);
+            showToast(`✗ You are not a player in this game!`, "error");
+            logEvent("Error", `Your account: ${myAccount}`);
+            logEvent("Error", `Black: ${blackPlayer}`);
+            logEvent("Error", `White: ${whitePlayer}`);
             return;
         }
         
-        logEvent("遊戲", `您是 ${myColorName}，嘗試在 (${x}, ${y}) 下棋`);
+        logEvent("Game", `You are ${myColorName}, attempting to place at (${x}, ${y})`);
         
-        // 檢查是否輪到我
+        // Check if it's my turn
         if (currentTurn !== myColor) {
-            const waitingFor = currentTurn === 1 ? "黑方" : "白方";
+            const waitingFor = currentTurn === 1 ? "Black" : "White";
             const waitingAddress = currentTurn === 1 ? blackPlayer : whitePlayer;
-            showToast(`⚠ 還沒輪到您！現在是 ${waitingFor} 的回合`, "warning");
-            logEvent("遊戲", `等待 ${waitingFor} (${waitingAddress}) 下棋...`);
+            showToast(`⚠ Not your turn yet! Now is ${waitingFor}'s turn`, "warning");
+            logEvent("Game", `Waiting for ${waitingFor} (${waitingAddress}) to move...`);
             return;
         }
         
-        // 檢查位置是否為空
+        // Check if position is empty
         const piece = await contract.methods.getPiece(currentGameId, x, y).call();
         if (parseInt(piece) !== 0) {
-            const pieceNames = ["空", "黑子", "白子"];
-            showToast(`✗ 位置 (${x}, ${y}) 已有 ${pieceNames[parseInt(piece)]}！`, "warning");
+            const pieceNames = ["Empty", "Black piece", "White piece"];
+            showToast(`✗ Position (${x}, ${y}) already has ${pieceNames[parseInt(piece)]}!`, "warning");
             return;
         }
 
-        showToast(`⏳ 正在下 ${myColorName} 棋 (${x}, ${y})...`, "info");
+        showToast(`⏳ Making ${myColorName} move (${x}, ${y})...`, "info");
         
-        // 🔥 關鍵修改：發送到合約時交換 x 和 y
-        // 因為合約的 board[_x][_y] 實際上應該理解為 board[row][col]
-        console.log(`🔄 座標轉換: UI(${x}, ${y}) -> Contract(${y}, ${x})`);
-        logEvent("交易", `發送 makeMove: gameId=${currentGameId}, contract_x=${y}, contract_y=${x} (UI座標: ${x},${y})`);
+        // Swap x and y when sending to contract because contract treats _x as row and _y as col
+        console.log(`🔄 Coordinate transformation: UI(${x}, ${y}) -> Contract(${y}, ${x})`);
+        logEvent("Transaction", `Sending makeMove: gameId=${currentGameId}, contract_x=${y}, contract_y=${x} (UI coords: ${x},${y})`);
 
         const receipt = await contract.methods.makeMove(currentGameId, y, x).send({
             from: currentAccount,
@@ -365,115 +351,115 @@ async function makeMove(x, y) {
 
         console.log("Transaction receipt:", receipt);
 
-        showToast(`✓ 下棋成功！位置: (${x}, ${y})`, "success");
-        logEvent("遊戲", `成功在 (${x}, ${y}) 下 ${myColorName} 棋`);
+        showToast(`✓ Move successful! Position: (${x}, ${y})`, "success");
+        logEvent("Game", `Successfully placed ${myColorName} piece at (${x}, ${y})`);
         
-        // 本地更新棋盤（立即反饋）
+        // Local update board (immediate feedback)
         board.placePiece(x, y, myColor);
         
-        showToast("⚠ 請執行挖礦命令確認交易", "warning");
+        showToast("⚠ Please run mining command to confirm transaction", "warning");
 
     } catch (error) {
-        console.error("下棋失敗:", error);
+        console.error("Move failed:", error);
         
-        let errorMsg = "未知錯誤";
+        let errorMsg = "Unknown error";
         if (error.message) {
             const msg = error.message.toLowerCase();
             if (msg.includes("not your turn")) {
-                errorMsg = "還沒輪到您下棋！";
-                errorDetails = "請等待對手完成回合";
+                errorMsg = "Not your turn yet!";
+                errorDetails = "Please wait for opponent to finish their turn";
             } else if (msg.includes("position already occupied") || msg.includes("position occupied")) {
-                errorMsg = `位置 (${x}, ${y}) 已被占用！`;
-                errorDetails = "請選擇其他空位";
+                errorMsg = `Position (${x}, ${y}) is occupied!`;
+                errorDetails = "Please choose another empty position";
             } else if (msg.includes("game is not in playing state")) {
-                errorMsg = "遊戲不在進行中";
-                errorDetails = "請檢查遊戲狀態";
+                errorMsg = "Game is not in playing state";
+                errorDetails = "Please check game state";
             } else if (msg.includes("invalid coordinates")) {
-                errorMsg = `座標 (${x}, ${y}) 無效！`;
-                errorDetails = "座標範圍應為 0-14";
+                errorMsg = `Coordinates (${x}, ${y}) invalid!`;
+                errorDetails = "Coordinates should be 0-14";
             } else if (msg.includes("not a player")) {
-                errorMsg = "您不是這場遊戲的玩家";
-                errorDetails = "請確認您加入了正確的遊戲";
+                errorMsg = "You are not a player in this game";
+                errorDetails = "Please confirm you joined the correct game";
             } else if (msg.includes("user denied")) {
-                errorMsg = "交易被拒絕";
-                errorDetails = "您取消了交易簽名";
+                errorMsg = "Transaction rejected";
+                errorDetails = "You cancelled the transaction signature";
             } else if (msg.includes("insufficient funds")) {
-                errorMsg = "餘額不足";
-                errorDetails = "請確保帳號有足夠的 ETH 支付 gas";
+                errorMsg = "Insufficient balance";
+                errorDetails = "Please ensure account has enough ETH for gas";
             } else if (msg.includes("reverted")) {
-                errorMsg = "交易被回滾";
-                errorDetails = "可能原因：不是您的回合、位置已占用、或遊戲已結束";
+                errorMsg = "Transaction reverted";
+                errorDetails = "Possible reasons: not your turn, position occupied, or game ended";
             } else {
                 errorMsg = error.message;
             }
         }
         
-        showToast(`✗ 下棋失敗: ${errorMsg}`, "error");
+        showToast(`✗ Move failed: ${errorMsg}`, "error");
         if (errorDetails) {
             showToast(`💡 ${errorDetails}`, "info");
         }
         
-        logEvent("錯誤", `下棋失敗: ${errorMsg}`);
-        logEvent("錯誤", `座標: (${x}, ${y})`);
-        logEvent("錯誤", `詳細: ${error.message}`);
+        logEvent("Error", `Move failed: ${errorMsg}`);
+        logEvent("Error", `Coordinates: (${x}, ${y})`);
+        logEvent("Error", `Details: ${error.message}`);
         
-        // 🔥 在 console 輸出完整錯誤供調試
-        console.group("❌ 下棋失敗詳情");
-        console.log("座標:", x, y);
-        console.log("遊戲 ID:", currentGameId);
-        console.log("帳號:", currentAccount);
-        console.log("錯誤訊息:", error.message);
-        console.log("錯誤物件:", error);
+        // Output complete error to console for debugging
+        console.group("❌ Move failed details");
+        console.log("Coordinates:", x, y);
+        console.log("Game ID:", currentGameId);
+        console.log("Account:", currentAccount);
+        console.log("Error message:", error.message);
+        console.log("Error object:", error);
         console.groupEnd();
     }
 }
 
-// 認輸
+// Surrender
 async function surrender() {
     if (!currentAccount) {
-        showToast("請先選擇帳號", "warning");
+        showToast("Please select account first", "warning");
         return;
     }
     
     if (currentGameId === null) {
-        showToast("請先載入遊戲", "warning");
+        showToast("Please load game first", "warning");
         return;
     }
     
-    if (!confirm("確定要認輸嗎？")) {
+    if (!confirm("Are you sure you want to surrender?")) {
         return;
     }
     
     try {
-        showToast("⏳ 正在認輸...", "info");
-        logEvent("遊戲", "玩家認輸");
+        showToast("⏳ Surrendering...", "info");
+        logEvent("Game", "Player surrendered");
         
         await contract.methods.surrender(currentGameId).send({
             from: currentAccount,
             gas: 3000000
         });
         
-        showToast("✓ 已認輸", "success");
-        logEvent("遊戲", "認輸成功");
+        showToast("✓ Surrendered", "success");
+        logEvent("Game", "Surrender successful");
         
-        showToast("⚠ 請記得執行挖礦命令確認交易", "warning");
+        showToast("⚠ Please remember to run mining command to confirm transaction", "warning");
         
     } catch (error) {
-        console.error("認輸失敗:", error);
-        showToast("✗ 認輸失敗: " + error.message, "error");
-        logEvent("錯誤", "認輸失敗: " + error.message);
+        console.error("Failed to surrender:", error);
+        showToast("✗ Failed to surrender: " + error.message, "error");
+        logEvent("Error", "Failed to surrender: " + error.message);
     }
 }
 
-// 訂閱事件
+// Subscribe to events
 function subscribeToEvents() {
-    // 清除舊訂閱
+    // Clear old subscriptions
     eventSubscriptions.forEach(sub => sub.unsubscribe());
     eventSubscriptions = [];
     
     if (currentGameId === null) return;
     
-    // 訂閱 MoveMade 事件
+    // Subscribe to MoveMade event
     const moveSub = contract.events.MoveMade({
         filter: { gameId: currentGameId },
         fromBlock: 'latest'
@@ -481,46 +467,46 @@ function subscribeToEvents() {
     .on('data', async (event) => {
         const { x, y, piece, player } = event.returnValues;
         
-        // 🔥 座標轉換
-        const uiX = parseInt(y);  // 合約的 y -> UI 的 x
-        const uiY = parseInt(x);  // 合約的 x -> UI 的 y
+        // Coordinate transformation
+        const uiX = parseInt(y);  // Contract y -> UI x
+        const uiY = parseInt(x);  // Contract x -> UI y
         
-        console.log(`📡 MoveMade轉換: Contract(${x}, ${y}) -> UI(${uiX}, ${uiY})`);
-        logEvent("移動", `玩家 ${formatAddress(player)} 下在 (${uiX}, ${uiY})`);
+        console.log(`📡 MoveMade transformation: Contract(${x}, ${y}) -> UI(${uiX}, ${uiY})`);
+        logEvent("Move", `Player ${formatAddress(player)} placed at (${uiX}, ${uiY})`);
         
-        // 重新載入遊戲狀態
+        // Reload game state
         await loadGame();
     })
     .on('error', console.error);
     
     eventSubscriptions.push(moveSub);
     
-    // 訂閱 GameEnded 事件
+    // Subscribe to GameEnded event
     const endSub = contract.events.GameEnded({
         filter: { gameId: currentGameId },
         fromBlock: 'latest'
     })
     .on('data', (event) => {
         const { state, winner } = event.returnValues;
-        const stateNames = ["等待中", "進行中", "黑方勝", "白方勝", "平局"];
-        logEvent("遊戲結束", `結果: ${stateNames[state]}, 贏家: ${formatAddress(winner)}`);
-        showToast(`🎉 遊戲結束！${stateNames[state]}`, "success");
+        const stateNames = ["Waiting", "Playing", "Black Won", "White Won", "Draw"];
+        logEvent("Game Ended", `Result: ${stateNames[state]}, Winner: ${formatAddress(winner)}`);
+        showToast(`🎉 Game ended! ${stateNames[state]}`, "success");
     })
     .on('error', console.error);
     
     eventSubscriptions.push(endSub);
     
-    // 訂閱 PlayerJoined 事件
+    // Subscribe to PlayerJoined event
     const joinSub = contract.events.PlayerJoined({
         filter: { gameId: currentGameId },
         fromBlock: 'latest'
     })
     .on('data', async (event) => {
         const { player } = event.returnValues;
-        logEvent("玩家加入", `玩家 ${formatAddress(player)} 已加入遊戲`);
-        showToast(`✓ 玩家已加入遊戲`, "success");
+        logEvent("Player Joined", `Player ${formatAddress(player)} joined game`);
+        showToast(`✓ Player joined game`, "success");
         
-        // 重新載入遊戲狀態
+        // Reload game state
         await loadGame();
     })
     .on('error', console.error);
@@ -528,7 +514,7 @@ function subscribeToEvents() {
     eventSubscriptions.push(joinSub);
 }
 
-// 工具函數：格式化地址
+// Utility function: Format address
 function formatAddress(address) {
     if (!address || address === "0x0000000000000000000000000000000000000000") {
         return "-";
@@ -536,19 +522,19 @@ function formatAddress(address) {
     return `${address.substring(0, 6)}...${address.substring(38)}`;
 }
 
-// 更新連接狀態
+// Update connection status
 function updateConnectionStatus(connected) {
     const statusEl = document.getElementById('connectionStatus');
     if (connected) {
-        statusEl.textContent = "已連接";
+        statusEl.textContent = "Connected";
         statusEl.className = "status-connected";
     } else {
-        statusEl.textContent = "未連接";
+        statusEl.textContent = "Disconnected";
         statusEl.className = "status-disconnected";
     }
 }
 
-// 顯示提示訊息
+// Show toast message
 function showToast(message, type = "info") {
     const toast = document.getElementById('toast');
     toast.textContent = message;
@@ -559,7 +545,7 @@ function showToast(message, type = "info") {
     }, 5000);
 }
 
-// 記錄事件
+// Log event
 function logEvent(category, message) {
     const eventLog = document.getElementById('eventLog');
     const time = new Date().toLocaleTimeString();
@@ -572,27 +558,27 @@ function logEvent(category, message) {
     `;
     eventLog.insertBefore(entry, eventLog.firstChild);
     
-    // 限制記錄數量
+    // Limit log count
     while (eventLog.children.length > 50) {
         eventLog.removeChild(eventLog.lastChild);
     }
 }
 
-// 複製挖礦命令
+// Copy mining command
 function copyMiningCommand() {
     const command = "miner.start(1); admin.sleep(3); miner.stop()";
     navigator.clipboard.writeText(command).then(() => {
-        showToast("✓ 已複製挖礦命令", "success");
+        showToast("✓ Mining command copied", "success");
     }).catch(() => {
-        showToast("✗ 複製失敗", "error");
+        showToast("✗ Copy failed", "error");
     });
 }
 
-// 監聽下棋事件
+// Listen to move events
 function startEventListeners() {
     console.log('Starting event listeners...');
     
-    // 監聽 MoveMade 事件
+    // Listen to MoveMade event
     contract.events.MoveMade({
         fromBlock: 'latest'
     })
@@ -601,29 +587,27 @@ function startEventListeners() {
         
         const { gameId, x, y, piece } = event.returnValues;
         
-        // 🔥 關鍵：事件中的 x, y 是合約發出的 (row, col)
-        // 需要轉換為 UI 的 (col, row)
-        const uiX = parseInt(y);  // 合約的 y (col) -> UI 的 x
-        const uiY = parseInt(x);  // 合約的 x (row) -> UI 的 y
+        // Contract x,y in events are row,col; convert to UI col,row
+        const uiX = parseInt(y);  // Contract y (col) -> UI x
+        const uiY = parseInt(x);  // Contract x (row) -> UI y
         
-        console.log(`🔄 Event轉換: Contract(x=${x}, y=${y}) -> UI(${uiX}, ${uiY})`);
+        console.log(`🔄 Event transformation: Contract(x=${x}, y=${y}) -> UI(${uiX}, ${uiY})`);
         
         if (parseInt(gameId) === currentGameId) {
             board.placePiece(uiX, uiY, parseInt(piece));
             await loadGame();
         }
         
-        addEventLog(`下棋: 遊戲 ${gameId}, 位置 (${uiX}, ${uiY}), ${piece === '1' ? '黑' : '白'}子`);
+        addEventLog(`Move: Game ${gameId}, Position (${uiX}, ${uiY}), ${piece === '1' ? 'Black' : 'White'} piece`);
     })
     .on('error', console.error);
     
-    // ... 其他事件監聽器保持不變
+    // ... other event listeners remain unchanged
 }
 
-// 🔥 新增：恢復遊戲會話
 async function restoreGameSession() {
     try {
-        // 從 localStorage 恢復帳號
+        // Restore account from localStorage
         const savedAccount = localStorage.getItem('currentAccount');
         if (savedAccount) {
             const accounts = await web3.eth.getAccounts();
@@ -631,114 +615,111 @@ async function restoreGameSession() {
                 document.getElementById('accountSelect').value = savedAccount;
                 currentAccount = savedAccount;
                 document.getElementById('accountAddress').textContent = 
-                    `當前帳號: ${formatAddress(currentAccount)}`;
+                    `Current Account: ${formatAddress(currentAccount)}`;
                 
-                // 自動檢查並載入遊戲
+                // Auto check and load game
                 await checkAndLoadCurrentGame();
             }
         }
         
-        // 從 localStorage 恢復遊戲 ID
+        // Restore game ID from localStorage
         const savedGameId = localStorage.getItem('currentGameId');
         if (savedGameId && currentAccount) {
             document.getElementById('gameIdInput').value = savedGameId;
-            showToast(`✓ 已恢復上次的遊戲會話 (遊戲 ${savedGameId})`, "info");
+            showToast(`✓ Restored previous game session (Game ${savedGameId})`, "info");
         }
         
     } catch (error) {
-        console.error('恢復會話失敗:', error);
+        console.error('Failed to restore session:', error);
     }
 }
 
-// 🔥 新增：檢查並載入玩家當前的遊戲
 async function checkAndLoadCurrentGame() {
     if (!currentAccount) return;
     
     try {
-        // 檢查玩家是否在某个遊戲中
+        // Check if player is in a game
         const gameId = await contract.methods.playerGame(currentAccount).call();
         
         if (gameId !== "0") {
-            // 獲取遊戲資訊
+            // Get game info
             const gameInfo = await contract.methods.getGameInfo(gameId).call();
-            const stateNames = ["等待對手", "進行中", "黑方獲勝", "白方獲勝", "平局"];
+            const stateNames = ["Waiting for opponent", "Playing", "Black won", "White won", "Draw"];
             const stateName = stateNames[parseInt(gameInfo.state)];
             
-            // 如果遊戲還在進行中
+            // If game is still in progress
             if (parseInt(gameInfo.state) === 0 || parseInt(gameInfo.state) === 1) {
-                showToast(`✓ 檢測到您在遊戲 ${gameId} 中 (${stateName})`, "success");
+                showToast(`✓ Detected you are in game ${gameId} (${stateName})`, "success");
                 
-                // 自動填入遊戲 ID
+                // Auto fill game ID
                 document.getElementById('gameIdInput').value = gameId;
                 
-                // 詢問是否載入
-                const shouldLoad = confirm(`您在遊戲 ${gameId} 中 (${stateName})，是否載入該遊戲？`);
+                // Ask whether to load
+                const shouldLoad = confirm(`You are in game ${gameId} (${stateName}), load this game?`);
                 if (shouldLoad) {
                     await loadGame();
                 }
             } else {
-                showToast(`上一場遊戲 ${gameId} 已結束 (${stateName})`, "info");
+                showToast(`Previous game ${gameId} ended (${stateName})`, "info");
             }
         } else {
-            showToast("您當前未在任何遊戲中", "info");
+            showToast("You are not currently in any game", "info");
         }
         
     } catch (error) {
-        console.error('檢查遊戲失敗:', error);
+        console.error('Failed to check game:', error);
     }
 }
 
-// 🔥 修改：改進 loadGame 函數
 async function improvedLoadGame() {
     const gameId = document.getElementById('gameIdInput').value;
     
     if (!gameId && gameId !== "0") {
-        showToast("請輸入遊戲 ID", "warning");
+        showToast("Please enter a Game ID", "warning");
         return;
     }
     
     try {
         currentGameId = parseInt(gameId);
         
-        showToast(`⏳ 正在載入遊戲 ${currentGameId}...`, "info");
+        showToast(`⏳ Loading game ${currentGameId}...`, "info");
         
-        // 獲取遊戲資訊
+        // Fetch game information
         const info = await contract.methods.getGameInfo(currentGameId).call();
         
-        // 更新遊戲資訊顯示
+        // Update game info display
         document.getElementById('gameState').textContent = GameState[info.state];
         document.getElementById('currentTurn').textContent = 
-            info.currentPlayer == 1 ? "黑方 (先手)" : "白方 (後手)";
+            info.currentPlayer == 1 ? "Black (Goes First)" : "White (Goes Second)";
         document.getElementById('blackPlayer').textContent = formatAddress(info.blackPlayer);
         document.getElementById('whitePlayer').textContent = 
             info.whitePlayer === "0x0000000000000000000000000000000000000000" 
-                ? "等待中..." 
+                ? "Waiting..." 
                 : formatAddress(info.whitePlayer);
         document.getElementById('betAmountDisplay').textContent = `${info.betAmount} wei`;
         document.getElementById('moveCount').textContent = info.moveCount;
         
-        // 獲取棋盤狀態
+        // Fetch board state
         const boardData = await contract.methods.getBoard(currentGameId).call();
         board.updateBoard(boardData);
         
-        // 🔥 保存遊戲 ID 到 localStorage
         localStorage.setItem('currentGameId', currentGameId);
         
-        showToast(`✓ 遊戲 ${currentGameId} 載入成功`, "success");
-        logEvent("系統", `已載入遊戲 ${currentGameId}`);
+        showToast(`✓ Game ${currentGameId} loaded successfully`, "success");
+        logEvent("System", `Loaded game ${currentGameId}`);
         
-        // 訂閱事件
+        // Subscribe to events
         subscribeToEvents();
         
-        // 載入聊天記錄
+        // Load chat history
         loadChatHistory();
         
     } catch (error) {
-        console.error("載入遊戲失敗:", error);
-        showToast("✗ 載入遊戲失敗: " + error.message, "error");
-        logEvent("錯誤", "載入遊戲失敗: " + error.message);
+        console.error("Failed to load game:", error);
+        showToast("✗ Failed to load game: " + error.message, "error");
+        logEvent("Error", "Failed to load game: " + error.message);
     }
 }
 
-// 頁面載入時初始化
+// Initialize on page load
 window.addEventListener('load', init);

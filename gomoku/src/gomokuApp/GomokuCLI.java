@@ -268,7 +268,6 @@ public class GomokuCLI {
         BigInteger gid = new BigInteger(SC.nextLine());
         
         try {
-            // 使用 GameInfo 結構體
             ethSC.Gomoku.GameInfo info = handler.getContract().getGameInfo(gid).send();
             
             System.out.println("\n=== Game Info ===");

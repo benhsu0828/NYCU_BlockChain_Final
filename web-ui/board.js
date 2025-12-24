@@ -1,4 +1,4 @@
-// 棋盤繪製模組
+// Board Rendering Module
 class GomokuBoard {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -7,52 +7,52 @@ class GomokuBoard {
         this.cellSize = 40;
         this.padding = 30;
         
-        // 設置 canvas 尺寸
+        // Set canvas dimensions
         this.canvas.width = this.cellSize * (this.boardSize - 1) + this.padding * 2;
         this.canvas.height = this.cellSize * (this.boardSize - 1) + this.padding * 2;
         
-        // 🔥 改用合約的索引方式：board[x][y]
+        // Using contract-compatible indexing: board[x][y]
         this.board = Array(15).fill(null).map(() => Array(15).fill(0));
         
-        // 事件監聽
+        // Event Listeners
         this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
         this.canvas.addEventListener('click', this.handleClick.bind(this));
         this.canvas.addEventListener('mouseleave', this.handleMouseLeave.bind(this));
         
         this.hoverPos = null;
-        this.onCellClick = null; // 點擊回調函數
+        this.onCellClick = null; // Callback function for clicks
         
         this.draw();
     }
     
-    // 繪製棋盤
+    // Render the board
     draw() {
         const ctx = this.ctx;
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // 繪製背景
+        // Draw background
         ctx.fillStyle = '#DEB887';
         ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // 繪製網格線
+        // Draw grid lines
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 1;
         
         for (let i = 0; i < this.boardSize; i++) {
-            // 垂直線
+            // Vertical lines
             ctx.beginPath();
             ctx.moveTo(this.padding + i * this.cellSize, this.padding);
             ctx.lineTo(this.padding + i * this.cellSize, this.padding + (this.boardSize - 1) * this.cellSize);
             ctx.stroke();
             
-            // 水平線
+            // Horizontal lines
             ctx.beginPath();
             ctx.moveTo(this.padding, this.padding + i * this.cellSize);
             ctx.lineTo(this.padding + (this.boardSize - 1) * this.cellSize, this.padding + i * this.cellSize);
             ctx.stroke();
         }
         
-        // 繪製星位（天元和四個角的星）
+        // Draw Star Points (Tengen and the four corner stars)
         const stars = [[3, 3], [3, 11], [11, 3], [11, 11], [7, 7]];
         ctx.fillStyle = '#000';
         stars.forEach(([x, y]) => {
@@ -65,26 +65,26 @@ class GomokuBoard {
             ctx.fill();
         });
         
-        // 繪製座標標籤
+        // Draw coordinate labels
         ctx.fillStyle = '#666';
         ctx.font = '12px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
-        // X 軸標籤 (0-14)
+        // X-axis labels (0-14)
         for (let i = 0; i < this.boardSize; i++) {
             ctx.fillText(i, this.padding + i * this.cellSize, this.padding - 15);
             ctx.fillText(i, this.padding + i * this.cellSize, this.canvas.height - this.padding + 15);
         }
         
-        // Y 軸標籤 (0-14)
+        // Y-axis labels (0-14)
         ctx.textAlign = 'right';
         for (let i = 0; i < this.boardSize; i++) {
             ctx.fillText(i, this.padding - 15, this.padding + i * this.cellSize);
             ctx.fillText(i, this.canvas.width - this.padding + 15, this.padding + i * this.cellSize);
         }
         
-        // 繪製棋子
+        // Draw pieces
         for (let x = 0; x < this.boardSize; x++) {
             for (let y = 0; y < this.boardSize; y++) {
                 if (this.board[x][y] !== 0) {
@@ -93,31 +93,31 @@ class GomokuBoard {
             }
         }
         
-        // 繪製懸停預覽
+        // Draw hover preview
         if (this.hoverPos) {
             this.drawHoverPiece(this.hoverPos.x, this.hoverPos.y);
         }
     }
     
-    // 繪製棋子
+    // Draw a single piece
     drawPiece(x, y, color) {
         const ctx = this.ctx;
         const centerX = this.padding + x * this.cellSize;
         const centerY = this.padding + y * this.cellSize;
         const radius = this.cellSize * 0.4;
         
-        // 繪製棋子陰影
+        // Draw piece shadow
         ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
         ctx.shadowBlur = 5;
         ctx.shadowOffsetX = 2;
         ctx.shadowOffsetY = 2;
         
-        // 繪製棋子
+        // Draw piece body
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
         
         if (color === 1) {
-            // 黑子 - 漸變效果
+            // Black piece - gradient effect
             const gradient = ctx.createRadialGradient(
                 centerX - radius * 0.3, centerY - radius * 0.3, radius * 0.1,
                 centerX, centerY, radius
@@ -126,7 +126,7 @@ class GomokuBoard {
             gradient.addColorStop(1, '#000');
             ctx.fillStyle = gradient;
         } else {
-            // 白子 - 漸變效果
+            // White piece - gradient effect
             const gradient = ctx.createRadialGradient(
                 centerX - radius * 0.3, centerY - radius * 0.3, radius * 0.1,
                 centerX, centerY, radius
@@ -139,13 +139,13 @@ class GomokuBoard {
         ctx.fill();
         ctx.shadowColor = 'transparent';
         
-        // 繪製棋子邊框
+        // Draw piece border
         ctx.strokeStyle = color === 1 ? '#000' : '#999';
         ctx.lineWidth = 1;
         ctx.stroke();
     }
     
-    // 繪製懸停預覽
+    // Draw hover preview piece
     drawHoverPiece(x, y, color) {
         const ctx = this.ctx;
         const centerX = this.padding + x * this.cellSize;
@@ -161,7 +161,7 @@ class GomokuBoard {
         ctx.stroke();
     }
     
-    // 鼠標移動處理
+    // Handle mouse movement
     handleMouseMove(e) {
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
@@ -183,13 +183,13 @@ class GomokuBoard {
         }
     }
     
-    // 鼠標離開處理
+    // Handle mouse leaving canvas
     handleMouseLeave() {
         this.hoverPos = null;
         this.draw();
     }
     
-    // 點擊處理
+    // Handle click events
     handleClick(e) {
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
@@ -210,20 +210,20 @@ class GomokuBoard {
         }
     }
     
-    // 更新棋盤狀態
+    // Update board state from external data
     updateBoard(boardData) {
         console.log('📥 Updating board with data:', boardData);
         
-        // 🔥 修正：清空棋盤
+        // Clear the local board first
         this.board = Array(15).fill(null).map(() => Array(15).fill(0));
         
-        // 🔥 修正：從合約數據直接複製（現在前端也用 board[x][y]）
+        // Copy directly from contract data (frontend now uses board[x][y] consistently)
         if (Array.isArray(boardData) && boardData.length === 15) {
-            console.log('🔄 Loading contract board[x][y] to display board[x][y]');
+            console.log('🔄 Syncing contract board[x][y] to display board[x][y]');
             for (let x = 0; x < 15; x++) {
                 if (Array.isArray(boardData[x]) && boardData[x].length === 15) {
                     for (let y = 0; y < 15; y++) {
-                        // 確保正確轉換數據類型
+                        // Ensure data type conversion
                         const value = boardData[x][y];
                         const piece = parseInt(value) || 0;
                         if (piece !== 0) {
@@ -235,17 +235,17 @@ class GomokuBoard {
             }
         }
         
-        console.log('✅ Board after update:', this.board);
+        console.log('✅ Board update complete:', this.board);
         this.draw();
     }
     
-    // 清空棋盤
+    // Reset the board
     clear() {
         this.board = Array(15).fill(null).map(() => Array(15).fill(0));
         this.draw();
     }
     
-    // 放置棋子（用於本地預覽）
+    // Place a piece manually (used for local preview)
     placePiece(x, y, color) {
         console.log(`🎨 Placing piece: (${x}, ${y}) = ${color} (${color === 1 ? 'Black' : 'White'})`);
         if (x >= 0 && x < this.boardSize && y >= 0 && y < this.boardSize) {
