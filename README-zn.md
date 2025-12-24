@@ -386,27 +386,6 @@ miner.start(1)    // 啟動挖礦
 admin.sleep(2)    // 等待 2 秒
 miner.stop()      // 停止挖礦
 ```
-
-**便捷函數**（推薦）:
-```javascript
-// 在 Geth console 定義一次
-function m() {
-    var pending = txpool.status.pending;
-    if (pending > 0) {
-        console.log("Mining " + pending + " tx...");
-        miner.start(1);
-        admin.sleep(3);
-        miner.stop();
-        console.log("✓ Block " + eth.blockNumber);
-    } else {
-        console.log("No pending tx");
-    }
-}
-
-// 每次交易後執行
-m()
-```
-
 ### 常見錯誤處理
 
 **錯誤: "You are already in this game"**
@@ -457,44 +436,6 @@ Gomoku.sol (智能合約)
 5. Geth 執行合約
 6. 合約驗證 + 更新狀態
 7. 返回結果 → 顯示給使用者
-
----
-
-## 🔧 開發擴展
-
-### 如何重新生成合約包裝類
-
-當 Solidity 合約更新後：
-
-```bash
-# 1. 編譯合約獲得 ABI 和 Bytecode
-# 在 Remix 中編譯，複製 ABI 到 Gomoku.abi.json
-
-# 2. 使用 Web3j 命令行工具生成
-web3j generate solidity \
-  -a Gomoku.abi.json \
-  -b Gomoku.bin \
-  -o ./src/ethSC \
-  -p ethSC
-```
-
-### 如何添加新功能
-
-1. 在 `Gomoku.sol` 中添加新函數
-2. 重新部署合約或使用 `upgradeable` 模式
-3. 重新生成 `Gomoku.java`
-4. 在 `GomokuHandler.java` 中添加便捷方法
-5. 在 `GomokuCLI.java` 選單中添加新選項
-
----
-
-## 📚 參考資料
-
-- **Web3j 官方文檔**: https://docs.web3j.io/
-- **Solidity 文檔**: https://docs.soliditylang.org/
-- **Geth 文檔**: https://geth.ethereum.org/docs/
-
----
 
 ## 合約地址
 

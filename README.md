@@ -163,13 +163,11 @@ web-ui/
    personal.unlockAccount(eth.accounts[1], "nycu2", 0)
    ```
 
-2. **Serve the static files** (pick one):
+2. **Serve the static files**:
    ```bash
    # Python
    cd web-ui
    python -m http.server 8000
-   # or Node.js
-   http-server -p 8000 --cors
    ```
    Open http://localhost:8000.
 
@@ -186,26 +184,6 @@ web-ui/
    const ACCOUNTS = { player1: "0x...", player2: "0x..." };
    ```
 
-## Mining helper
-Define once in the Geth console to mine whenever pending transactions exist:
-```javascript
-function m() {
-  var pending = txpool.status.pending;
-  if (pending > 0) {
-    console.log("Mining " + pending + " tx...");
-    miner.start(1);
-    admin.sleep(3);
-    miner.stop();
-    console.log("✓ Block " + eth.blockNumber);
-  } else {
-    console.log("No pending tx");
-  }
-}
-
-// Call after each transaction
-m()
-```
-
 ## Troubleshooting
 - "You are already in this game": use a different account when joining.
 - "Not your turn": wait for the opponent; check `currentPlayer` via option `getGameInfo`.
@@ -213,20 +191,3 @@ m()
 - "authentication needed": unlock accounts in the Geth console with `personal.unlockAccount(...)`.
 - UI cannot connect: confirm Geth HTTP RPC is running, CORS/vhosts allow all, and port 8545 is reachable.
 - Transaction stuck: run the mining helper or `miner.start(1); admin.sleep(3); miner.stop();`.
-
-## Regenerating the contract wrapper
-If `Gomoku.sol` changes:
-```bash
-# Compile in Remix to get ABI + bytecode (Gomoku.abi.json, Gomoku.bin)
-web3j generate solidity \
-  -a Gomoku.abi.json \
-  -b Gomoku.bin \
-  -o ./src/ethSC \
-  -p ethSC
-```
-Then rebuild the Java project and redeploy the contract as needed.
-
-## References
-- Web3j docs: https://docs.web3j.io/
-- Solidity docs: https://docs.soliditylang.org/
-- Geth docs: https://geth.ethereum.org/docs/
