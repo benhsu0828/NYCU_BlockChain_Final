@@ -17,7 +17,7 @@ End-to-end notes for the Java + Web3j CLI and the browser UI that interact with 
 - References
 
 ## Overview
-- Private chain running in Dockerized Geth (HTTP RPC on 8545, network ID 11330023).
+- Private chain running in Docker (HTTP RPC on 8545, network ID 11330023).
 - Two-player Gomoku with optional bet amount; includes on-chain chat.
 - Two clients: Java CLI (Web3j) and a browser UI (Web3.js + canvas board + chat).
 
@@ -191,3 +191,12 @@ web-ui/
 - "authentication needed": unlock accounts in the Geth console with `personal.unlockAccount(...)`.
 - UI cannot connect: confirm Geth HTTP RPC is running, CORS/vhosts allow all, and port 8545 is reachable.
 - Transaction stuck: run the mining helper or `miner.start(1); admin.sleep(3); miner.stop();`.
+
+## Team Assignment
+
+| Workstream | Scope | Owner |
+| :--- | :--- | :--- |
+| Smart Contract & Chain Ops | Author/review/deploy contracts; security checks; maintain [genesis.json](genesis.json), [scenario.json](scenario.json), and keystore management | 盧楷勛 |
+| Backend / Java Services | Contract interactions and game logic in [gomoku/src/ethSC](gomoku/src/ethSC) and [gomoku/src/gomokuApp](gomoku/src/gomokuApp); RPC wrappers, error handling, logging | Eldar lusupzhanov |
+| Frontend / Web UI | Improve [web-ui](web-ui) (board, chat, chain config); strengthen UX, state sync, wallet connectivity | 徐葆驊 |
+| Integration & Ops | Node/network config, CI/CD, version control, documentation (README, deployment guides), regression testing, packaging/release | 吳念澤 |
